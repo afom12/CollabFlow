@@ -1,0 +1,273 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  teamMembers   TeamMember[]
+  documents     Document[]
+  comments      Comment[]
+  issues        Issue[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// NextAuth.js models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Team/Workspace model
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  plan        String   @default("free") // free, pro, enterprise
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     TeamMember[]
+  documents   Document[]
+  projects    Project[]
+  issues      Issue[]
+  apiKeys     ApiKey[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  role      String   @default("member") // owner, admin, member, viewer
+  joinedAt  DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+// Document model (Notion-like)
+model Document {
+  id          String   @id @default(cuid())
+  title       String
+  content     Json?    // Rich text content
+  teamId      String
+  authorId    String
+  parentId    String?  // For nested pages
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id])
+  parent      Document? @relation("DocumentHierarchy", fields: [parentId], references: [id])
+  children    Document[] @relation("DocumentHierarchy")
+  comments    Comment[]
+  versions    DocumentVersion[]
+
+  @@index([teamId])
+  @@index([parentId])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  content    Json
+  version    Int
+  createdAt  DateTime @default(now())
+  createdBy  String
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_versions")
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  documentId String?
+  issueId    String?
+  authorId   String
+  parentId   String?  // For threaded comments
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  issue      Issue?    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author     User      @relation(fields: [authorId], references: [id])
+  parent     Comment?  @relation("CommentThread", fields: [parentId], references: [id])
+  replies    Comment[] @relation("CommentThread")
+
+  @@index([documentId])
+  @@index([issueId])
+  @@map("comments")
+}
+
+// Project Management models (Linear-like)
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  teamId      String
+  status      String   @default("active") // active, archived, completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+  sprints     Sprint[]
+
+  @@index([teamId])
+  @@map("projects")
+}
+
+model Issue {
+  id          String   @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  projectId   String
+  teamId      String
+  assigneeId  String?
+  status      String   @default("todo") // todo, in_progress, in_review, done
+  priority    String   @default("medium") // low, medium, high, urgent
+  type        String   @default("task") // task, bug, feature, epic
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  assignee    User?    @relation(fields: [assigneeId], references: [id])
+  comments    Comment[]
+  sprint      SprintIssue[]
+
+  @@index([projectId])
+  @@index([teamId])
+  @@index([status])
+  @@map("issues")
+}
+
+model Sprint {
+  id          String   @id @default(cuid())
+  name        String
+  projectId   String
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("planned") // planned, active, completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      SprintIssue[]
+
+  @@index([projectId])
+  @@map("sprints")
+}
+
+model SprintIssue {
+  id        String @id @default(cuid())
+  sprintId  String
+  issueId   String
+
+  sprint    Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  issue     Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([sprintId, issueId])
+  @@map("sprint_issues")
+}
+
+// API Keys for workspace integrations
+model ApiKey {
+  id        String   @id @default(cuid())
+  teamId    String
+  name      String
+  key       String   @unique
+  scopes    String[] // Array of permissions
+  expiresAt DateTime?
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@map("api_keys")
+}
+
+// Notifications
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // mention, comment, assignment, etc.
+  title     String
+  message   String   @db.Text
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@map("notifications")
+}
+
