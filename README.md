@@ -190,7 +190,48 @@ npx prisma generate  # Generate Prisma Client
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on contributing to this project.
+We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details.
+
+### Quick Start for Contributors
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and test thoroughly
+4. Commit your changes: `git commit -m 'Add amazing feature'`
+5. Push to the branch: `git push origin feature/amazing-feature`
+6. Open a Pull Request
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import your repository in [Vercel](https://vercel.com)
+3. Add environment variables in Vercel dashboard
+4. Deploy!
+
+### Other Platforms
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment guides for:
+- Railway
+- AWS
+- Docker
+- Self-hosted options
+
+## 🔒 Security
+
+See [SECURITY.md](./SECURITY.md) for security policies and reporting vulnerabilities.
+
+## 📊 Project Status
+
+- ✅ **Core Features**: Authentication, Documents, Projects, Teams
+- ✅ **Real-time**: Collaborative editing, Presence indicators
+- 🚧 **In Progress**: Advanced notifications, Analytics enhancements
+- 📋 **Planned**: Mobile app, Advanced integrations
+
+See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for detailed status.
 
 ## 📄 License
 
@@ -199,4 +240,12 @@ MIT License - see LICENSE file for details
 ## 🙏 Acknowledgments
 
 Built with inspiration from Notion, Linear, and Figma. Uses open-source technologies and follows Next.js best practices.
+
+## 🌟 Show Your Support
+
+If you find CollabFlow useful, please consider:
+- ⭐ Starring this repository
+- 🐛 Reporting bugs
+- 💡 Suggesting new features
+- 🤝 Contributing code
 

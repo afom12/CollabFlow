@@ -8,28 +8,6 @@ import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Activity, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Mock notifications - replace with actual data
-const mockNotifications = [
-  {
-    id: "1",
-    type: "mention" as const,
-    title: "You were mentioned",
-    message: "John Doe mentioned you in a comment",
-    link: "/dashboard/team/docs/doc1",
-    read: false,
-    createdAt: new Date("2024-01-16T10:00:00Z"),
-  },
-  {
-    id: "2",
-    type: "assignment" as const,
-    title: "New assignment",
-    message: "You were assigned to issue #42",
-    link: "/dashboard/team/projects/proj1/42",
-    read: false,
-    createdAt: new Date("2024-01-16T09:30:00Z"),
-  },
-]
-
 export default function DashboardLayout({
   children,
 }: {
@@ -87,11 +65,7 @@ export default function DashboardLayout({
             <h1 className="text-lg font-semibold">Team Workspace</h1>
           </div>
           <div className="flex items-center gap-2">
-            <NotificationsDropdown
-              notifications={mockNotifications}
-              onMarkAsRead={(id) => console.log("Mark as read:", id)}
-              onMarkAllAsRead={() => console.log("Mark all as read")}
-            />
+            <NotificationsDropdown />
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
             </Button>

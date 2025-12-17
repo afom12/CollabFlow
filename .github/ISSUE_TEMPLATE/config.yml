@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: CollabFlow Documentation
+    url: https://github.com/your-username/collabflow#readme
+    about: Check the README and documentation files for setup and usage guides
+  - name: Community Discussions
+    url: https://github.com/your-username/collabflow/discussions
+    about: Ask questions and discuss ideas with the community
+
