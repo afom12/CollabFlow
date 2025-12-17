@@ -4,10 +4,12 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { SearchBar } from "@/components/search-bar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, FileText, GitBranch, BarChart3, Settings, Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSession } from "next-auth/react"
 
 export default function DashboardLayout({
   children,
@@ -15,6 +17,10 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  
+  // Extract team ID from pathname
+  const teamId = pathname?.split("/")[1] || ""
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -101,8 +107,11 @@ export default function DashboardLayout({
       </aside>
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 border-b flex items-center justify-between px-6 bg-background">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
             <h1 className="text-lg font-semibold">Team Workspace</h1>
+            {teamId && session?.user?.id && (
+              <SearchBar teamId={teamId} userId={session.user.id} className="max-w-md" />
+            )}
           </div>
           <div className="flex items-center gap-2">
             <NotificationsDropdown />

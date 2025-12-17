@@ -2,66 +2,93 @@
 
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { CollaborativeEditor } from "@/components/collaborative-editor"
 import { DocumentVersionHistory } from "@/components/document-version-history"
 import { CommentsSection } from "@/components/comments-section"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Save, History } from "lucide-react"
-import { updateDocument } from "@/lib/actions/document"
+import { Save, History, Loader2 } from "lucide-react"
+import { updateDocument, getDocumentVersions, restoreDocumentVersion, getDocument } from "@/lib/actions/document"
 import { useToast } from "@/hooks/use-toast"
-
-// Mock data - replace with actual data fetching
-const mockDocument = {
-  id: "1",
-  title: "Getting Started Guide",
-  content: {
-    type: "doc",
-    content: [
-      {
-        type: "heading",
-        attrs: { level: 1 },
-        content: [{ type: "text", text: "Welcome to CollabFlow" }],
-      },
-      {
-        type: "paragraph",
-        content: [
-          {
-            type: "text",
-            text: "This is a collaborative document. Start editing to see real-time collaboration in action!",
-          },
-        ],
-      },
-    ],
-  },
-  versions: [
-    {
-      id: "1",
-      version: 1,
-      content: {},
-      createdAt: new Date("2024-01-15"),
-      createdBy: {
-        id: "1",
-        name: "John Doe",
-        email: "john@example.com",
-      },
-    },
-  ],
-}
 
 export default function DocumentPage() {
   const params = useParams()
   const documentId = params.documentId as string
-  const [document, setDocument] = useState(mockDocument)
+  const teamId = params.team as string
+  const { data: session } = useSession()
+  const [document, setDocument] = useState<any>(null)
+  const [versions, setVersions] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const { toast } = useToast()
 
+  useEffect(() => {
+    async function fetchDocument() {
+      try {
+        // Fetch document
+        const docResult = await getDocument(documentId)
+        if (docResult.success && docResult.document) {
+          setDocument(docResult.document)
+        } else {
+          // Fallback mock data
+          setDocument({
+            id: documentId,
+            title: "Getting Started Guide",
+            content: {
+              type: "doc",
+              content: [
+                {
+                  type: "heading",
+                  attrs: { level: 1 },
+                  content: [{ type: "text", text: "Welcome to CollabFlow" }],
+                },
+              ],
+            },
+          })
+        }
+
+        // Fetch versions
+        const versionsResult = await getDocumentVersions(documentId)
+        if (versionsResult.success && versionsResult.versions) {
+          setVersions(versionsResult.versions)
+        }
+      } catch (error) {
+        console.error("Error fetching document:", error)
+        // Fallback mock data
+        setDocument({
+          id: documentId,
+          title: "Getting Started Guide",
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Welcome to CollabFlow" }],
+              },
+            ],
+          },
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (documentId) {
+      fetchDocument()
+    }
+  }, [documentId])
+
   const handleSave = async (content: any) => {
     setIsSaving(true)
     const formData = new FormData()
-    formData.append("title", document.title)
+    formData.append("title", document?.title || "")
     formData.append("content", JSON.stringify(content))
+    if (session?.user?.id) {
+      formData.append("userId", session.user.id)
+    }
 
     try {
       const result = await updateDocument(documentId, formData)
@@ -76,6 +103,11 @@ export default function DocumentPage() {
           title: "Saved",
           description: "Document saved successfully!",
         })
+        // Refresh versions
+        const versionsResult = await getDocumentVersions(documentId)
+        if (versionsResult.success && versionsResult.versions) {
+          setVersions(versionsResult.versions)
+        }
       }
     } catch (error) {
       toast({
@@ -86,6 +118,52 @@ export default function DocumentPage() {
     }
     setIsSaving(false)
   }
+
+  const handleRestoreVersion = async (versionId: string) => {
+    if (!session?.user?.id) return
+
+    try {
+      const result = await restoreDocumentVersion(documentId, versionId, session.user.id)
+      if (result.error) {
+        toast({
+          title: "Error",
+          description: "Failed to restore version.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Restored",
+          description: "Document version restored successfully!",
+        })
+        // Refresh document and versions
+        window.location.reload()
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to restore version.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!document) {
+    return (
+      <div className="p-8">
+        <p className="text-muted-foreground">Document not found</p>
+      </div>
+    )
+  }
+
+  const currentVersion = versions.length > 0 ? versions[0].version : 1
 
   return (
     <div className="flex h-full">
@@ -110,15 +188,17 @@ export default function DocumentPage() {
           </div>
           <CollaborativeEditor
             documentId={documentId}
-            initialContent={document.content}
+            initialContent={document.content || { type: "doc", content: [] }}
             onSave={handleSave}
+            userId={session?.user?.id}
+            userName={session?.user?.name || "Anonymous"}
           />
           
           <div className="mt-8">
             <CommentsSection
               documentId={documentId}
               comments={[]}
-              currentUserId="current-user-id"
+              currentUserId={session?.user?.id || "anonymous"}
               onCommentAdded={() => {
                 // Refresh comments
                 window.location.reload()
@@ -130,14 +210,9 @@ export default function DocumentPage() {
       {showHistory && (
         <div className="w-80 border-l p-6 overflow-auto">
           <DocumentVersionHistory
-            versions={document.versions}
-            currentVersion={1}
-            onRestore={(versionId) => {
-              toast({
-                title: "Restored",
-                description: "Document version restored.",
-              })
-            }}
+            versions={versions}
+            currentVersion={currentVersion}
+            onRestore={handleRestoreVersion}
           />
         </div>
       )}

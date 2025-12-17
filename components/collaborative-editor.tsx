@@ -6,16 +6,23 @@ import { RoomProvider } from "@/lib/realtime/liveblocks"
 import { Bold, Italic, Heading1, Heading2, List, Quote, Code } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PresenceIndicator } from "@/components/presence-indicator"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 type CollaborativeEditorProps = {
   documentId: string
   initialContent?: any
   onSave?: (content: any) => void
+  userId?: string
+  userName?: string
 }
 
-function EditorContentComponent({ documentId, initialContent, onSave }: CollaborativeEditorProps) {
+function EditorContentComponent({ 
+  documentId, 
+  initialContent, 
+  onSave,
+}: CollaborativeEditorProps) {
   const roomId = `document:${documentId}`
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const editor = useEditor({
     extensions: [
@@ -28,11 +35,28 @@ function EditorContentComponent({ documentId, initialContent, onSave }: Collabor
       },
     },
     onUpdate: ({ editor }) => {
+      // Clear existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+      
+      // Debounced save - only save after user stops typing for 2 seconds
       if (onSave) {
-        onSave(editor.getJSON())
+        saveTimeoutRef.current = setTimeout(() => {
+          onSave(editor.getJSON())
+        }, 2000)
       }
     },
   })
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Auto-save debounced
   useEffect(() => {
@@ -118,12 +142,31 @@ function EditorContentComponent({ documentId, initialContent, onSave }: Collabor
   )
 }
 
-export function CollaborativeEditor({ documentId, initialContent, onSave }: CollaborativeEditorProps) {
+export function CollaborativeEditor({ 
+  documentId, 
+  initialContent, 
+  onSave,
+  userId,
+  userName,
+}: CollaborativeEditorProps) {
   const roomId = `document:${documentId}`
 
   return (
-    <RoomProvider id={roomId} initialPresence={{ cursor: null, currentPage: null, editingDocument: documentId }}>
-      <EditorContentComponent documentId={documentId} initialContent={initialContent} onSave={onSave} />
+    <RoomProvider 
+      id={roomId} 
+      initialPresence={{ 
+        cursor: null, 
+        currentPage: null, 
+        editingDocument: documentId,
+        name: userName || "Anonymous",
+        color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`,
+      }}
+    >
+      <EditorContentComponent 
+        documentId={documentId} 
+        initialContent={initialContent} 
+        onSave={onSave}
+      />
     </RoomProvider>
   )
 }
