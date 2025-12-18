@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { CollaborativeEditor } from "@/components/collaborative-editor"
 import { DocumentVersionHistory } from "@/components/document-version-history"
-import { CommentsSection } from "@/components/comments-section"
+import { CommentsSectionEnhanced } from "@/components/comments-section-enhanced"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Save, History, Loader2 } from "lucide-react"
@@ -195,10 +195,11 @@ export default function DocumentPage() {
           />
           
           <div className="mt-8">
-            <CommentsSection
+            <CommentsSectionEnhanced
               documentId={documentId}
               comments={[]}
               currentUserId={session?.user?.id || "anonymous"}
+              teamId={teamId}
               onCommentAdded={() => {
                 // Refresh comments
                 window.location.reload()

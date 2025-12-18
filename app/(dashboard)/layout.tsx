@@ -7,7 +7,7 @@ import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { SearchBar } from "@/components/search-bar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, FileText, GitBranch, BarChart3, Settings, Activity } from "lucide-react"
+import { LayoutDashboard, FileText, GitBranch, BarChart3, Settings, Activity, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSession } from "next-auth/react"
 
@@ -34,6 +34,7 @@ export default function DashboardLayout({
   const teamNavItems = [
     { href: "/team/docs", label: "Documents", icon: FileText },
     { href: "/team/projects", label: "Projects", icon: GitBranch },
+    { href: "/team/chat", label: "Chat", icon: MessageSquare },
     { href: "/team/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/team/settings", label: "Settings", icon: Settings },
   ]

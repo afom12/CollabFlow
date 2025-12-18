@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { updateIssueStatus } from "@/lib/actions/issue"
-import { CommentsSection } from "@/components/comments-section"
+import { CommentsSectionEnhanced } from "@/components/comments-section-enhanced"
 import { ArrowLeft, User, Calendar } from "lucide-react"
 import Link from "next/link"
 
@@ -116,10 +116,11 @@ export default function IssueDetailPage() {
             </CardContent>
           </Card>
 
-          <CommentsSection
+          <CommentsSectionEnhanced
             issueId={issueId}
             comments={[]}
             currentUserId="current-user-id"
+            teamId={teamId}
             onCommentAdded={() => {
               // Refresh comments
               window.location.reload()
