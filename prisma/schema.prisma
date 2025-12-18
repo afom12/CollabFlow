@@ -28,6 +28,10 @@ model User {
   comments      Comment[]
   issues        Issue[]
   notifications Notification[]
+  reactions     Reaction[]
+  messages      Message[]
+  reactionMessages ReactionMessage[]
+  attachments   Attachment[]
 
   @@map("users")
 }
@@ -88,6 +92,7 @@ model Team {
   projects    Project[]
   issues      Issue[]
   apiKeys     ApiKey[]
+  messages    Message[]
 
   @@map("teams")
 }
@@ -124,6 +129,8 @@ model Document {
   children    Document[] @relation("DocumentHierarchy")
   comments    Comment[]
   versions    DocumentVersion[]
+  reactions   Reaction[]
+  attachments Attachment[]
 
   @@index([teamId])
   @@index([parentId])
@@ -150,6 +157,7 @@ model Comment {
   issueId    String?
   authorId   String
   parentId   String?  // For threaded comments
+  mentions   String[] // Array of user IDs mentioned in comment
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -158,10 +166,107 @@ model Comment {
   author     User      @relation(fields: [authorId], references: [id])
   parent     Comment?  @relation("CommentThread", fields: [parentId], references: [id])
   replies    Comment[] @relation("CommentThread")
+  reactions  Reaction[]
 
   @@index([documentId])
   @@index([issueId])
   @@map("comments")
+}
+
+// Reactions/Emojis on comments and documents
+model Reaction {
+  id         String   @id @default(cuid())
+  emoji      String   // emoji character or code
+  commentId  String?
+  documentId String?
+  userId     String
+  createdAt  DateTime @default(now())
+
+  comment    Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId, emoji])
+  @@unique([documentId, userId, emoji])
+  @@index([commentId])
+  @@index([documentId])
+  @@map("reactions")
+}
+
+// File attachments
+model Attachment {
+  id         String   @id @default(cuid())
+  name       String
+  url        String
+  type       String   // image, pdf, document, etc.
+  size       Int      // Size in bytes
+  documentId String?
+  issueId    String?
+  commentId String?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  issue      Issue?    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  comment    Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  uploader   User      @relation(fields: [uploadedBy], references: [id])
+
+  @@index([documentId])
+  @@index([issueId])
+  @@index([commentId])
+  @@map("attachments")
+}
+
+// Team chat/messaging
+model Message {
+  id        String   @id @default(cuid())
+  teamId    String
+  content   String   @db.Text
+  authorId  String
+  mentions  String[] // Array of user IDs mentioned
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  reactions ReactionMessage[]
+  attachments AttachmentMessage[]
+
+  @@index([teamId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// Reactions on messages
+model ReactionMessage {
+  id        String   @id @default(cuid())
+  messageId String
+  emoji     String
+  userId    String
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("reaction_messages")
+}
+
+// Attachments on messages
+model AttachmentMessage {
+  id        String   @id @default(cuid())
+  messageId String
+  name      String
+  url       String
+  type      String
+  size      Int
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("attachment_messages")
 }
 
 // Project Management models (Linear-like)
@@ -200,6 +305,7 @@ model Issue {
   assignee    User?    @relation(fields: [assigneeId], references: [id])
   comments    Comment[]
   sprint      SprintIssue[]
+  attachments Attachment[]
 
   @@index([projectId])
   @@index([teamId])
